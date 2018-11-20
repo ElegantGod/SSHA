@@ -16,6 +16,7 @@ class SSHDetector:
     def __init__(self, prefix, epoch, ctx_id=0, test_mode=False):
         self.ctx_id = ctx_id
         self.ctx = mx.gpu(self.ctx_id)
+        # self.ctx = mx.cpu(0)
         self.fpn_keys = []
         fpn_stride = []
         fpn_base_size = []

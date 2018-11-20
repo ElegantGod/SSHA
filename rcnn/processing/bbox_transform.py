@@ -167,7 +167,7 @@ def kpoint_pred(boxes, point_deltas):
     pred_points = np.zeros(point_deltas.shape)
     # x1
     x = d1x * widths
-    print("aa", d1x.shape, widths.shape, ctr_x.shape, x.shape)
+    # print("aa", d1x.shape, widths.shape, ctr_x.shape, x.shape)
     pred_points[:, 0] = d1x * widths + ctr_x
     pred_points[:, 1] = d1y * heights + ctr_y
     pred_points[:, 2] = d2x * widths + ctr_x

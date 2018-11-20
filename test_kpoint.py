@@ -8,7 +8,7 @@ from ssha_detector import SSHDetector
 scales = [1200, 1600]
 # scales = [200, 600]
 t = 2
-detector = SSHDetector('./kmodel/e2e', 88)
+detector = SSHDetector('./kmodel/e2e', 0)
 
 
 f = '../sample-images/t1.jpg'
