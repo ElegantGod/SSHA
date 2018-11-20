@@ -16,7 +16,6 @@ class SSHDetector:
     def __init__(self, prefix, epoch, ctx_id=0, test_mode=False):
         self.ctx_id = ctx_id
         self.ctx = mx.gpu(self.ctx_id)
-        # self.ctx = mx.cpu(0)
         self.fpn_keys = []
         fpn_stride = []
         fpn_base_size = []
@@ -83,6 +82,11 @@ class SSHDetector:
             # post_nms_topN = self._rpn_post_nms_top_n
             # min_size_dict = self._rpn_min_size_fpn
 
+            RPN_ANCHOR_CFG = {
+                '32': {'SCALES': (32, 16), 'BASE_SIZE': 16, 'RATIOS': (1,), 'NUM_ANCHORS': 2, 'ALLOWED_BORDER': 512},
+                '16': {'SCALES': (8, 4), 'BASE_SIZE': 16, 'RATIOS': (1,), 'NUM_ANCHORS': 2, 'ALLOWED_BORDER': 0},
+                '8': {'SCALES': (2, 1), 'BASE_SIZE': 16, 'RATIOS': (1,), 'NUM_ANCHORS': 2, 'ALLOWED_BORDER': 0},
+            }
             for s in self._feat_stride_fpn:
                 if len(scales) > 1 and s == 32 and im_scale == scales[-1]:
                     continue
@@ -94,6 +98,7 @@ class SSHDetector:
                 elif s == 8:
                     idx = 6
                 print('getting', im_scale, stride, idx, len(net_out), data.shape, file=sys.stderr)
+                allowed_border = RPN_ANCHOR_CFG[str(s)]['ALLOWED_BORDER']
                 # print("net_out", net_out)
                 scores = net_out[idx].asnumpy()
                 # print(scores.shape)
@@ -120,7 +125,13 @@ class SSHDetector:
                 anchors = anchors_plane(height, width, stride, self._anchors_fpn['stride%s' % s].astype(np.float32))
                 # print((height, width), (_height, _width), anchors.shape, bbox_deltas.shape, scores.shape, file=sys.stderr)
                 anchors = anchors.reshape((K * A, 4))
-
+                all_anchors = anchors
+                inds_inside = np.where((all_anchors[:, 0] >= -allowed_border) &
+                                       (all_anchors[:, 1] >= -allowed_border) &
+                                       (all_anchors[:, 2] < im_info[1] + allowed_border) &
+                                       (all_anchors[:, 3] < im_info[0] + allowed_border))[0]
+                # inds_inside = np.array(range(len(all_anchors))) ## TODO
+                anchors = all_anchors[inds_inside, :]
                 # print('pre', bbox_deltas.shape, height, width)
                 bbox_deltas = self._clip_pad(bbox_deltas, (height, width))
                 # print('after', bbox_deltas.shape, height, width)
@@ -131,13 +142,16 @@ class SSHDetector:
 
                 scores = self._clip_pad(scores, (height, width))
                 scores = scores.transpose((0, 2, 3, 1)).reshape((-1, 1))
+                scores = scores[inds_inside, :]
 
                 # print(anchors.shape, bbox_deltas.shape, A, K, file=sys.stderr)
+                bbox_deltas = bbox_deltas[inds_inside, :]
                 proposals = self._bbox_pred(anchors, bbox_deltas)
                 # proposals = anchors
 
                 proposals = clip_boxes(proposals, im_info[:2])
 
+                kpoint_deltas = kpoint_deltas[inds_inside, :]
                 proposals_kp = kpoint_pred(anchors, kpoint_deltas)
 
                 proposals_kp = clip_points(proposals_kp, im_info[:2])
