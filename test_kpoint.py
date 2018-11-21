@@ -11,8 +11,9 @@ t = 2
 detector = SSHDetector('./kmodel/e2e', 0)
 
 
+
 f = '../sample-images/t1.jpg'
-f = 'test_image/test_11.jpg'
+f = 'test_image/test_2.jpg'
 if len(sys.argv)>1:
   f = sys.argv[1]
 img = cv2.imread(f)
@@ -22,6 +23,8 @@ target_size = scales[0]
 max_size = scales[1]
 im_size_min = np.min(im_shape[0:2])
 im_size_max = np.max(im_shape[0:2])
+# cv2.copyMakeBorder()
+img = cv2.copyMakeBorder(img, 5, 5, 5, 5, borderType=cv2.BORDER_CONSTANT, value=[0,0,0])
 if im_size_min>target_size or im_size_max>max_size:
   im_scale = float(target_size) / float(im_size_min)
   # prevent bigger axis from being more than max_size:
@@ -32,7 +35,7 @@ if im_size_min>target_size or im_size_max>max_size:
 # for i in xrange(t-1): #warmup
 #   faces = detector.detect(img)
 timea = datetime.datetime.now()
-faces = detector.detect(img, threshold=0.5)
+faces = detector.detect(img, threshold=0.8)
 timeb = datetime.datetime.now()
 for num in range(faces.shape[0]):
   bbox = faces[num, 0:4]
@@ -41,7 +44,7 @@ for num in range(faces.shape[0]):
   for knum in range(5):
       cv2.circle(img, (kpoint[2*knum], kpoint[2*knum+1]), 1, [0,0,255], 2)
 
-cv2.imwrite("res.jpg", img)
+cv2.imwrite("res.jpg", img[5:-5,5:-5,:])
 diff = timeb - timea
 print('detection uses', diff.total_seconds(), 'seconds')
 print('find', faces.shape[0], 'faces')
